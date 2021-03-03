@@ -85,6 +85,8 @@ info ...
 disconnect ...
 quit
 
+sudo ./enablebluetooth.sh
+
 -------------------------------------------------------------------------
 
 Here are the summary of the tests: 
