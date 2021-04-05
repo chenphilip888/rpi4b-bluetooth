@@ -1,5 +1,13 @@
 Bluetooth gpio experiments on Raspberry PI 4B board.
 
+Equipment needed:
+1. PLT_M70 bluetooth earphone.
+2. Koss KPH7 lightweight headphone.
+3. Logitech USB headset.
+4. Seeed Grove starter kit LED.
+5. Grove-LCD RGB Backlight V3.0 JHD1313M2.
+6. Analog Servo.
+
 The following 3 tests are included: ( see below for tests summary )
 1. led test
 2. i2c lcd test
@@ -40,7 +48,7 @@ sudo ifconfig
 sudo shutdown -h now
 Power off Raspberry PI 4B board.
 Unplug serial USB cable from PC.
-type "exit" on PC.
+Type "exit" on PC.
 Power on Raspberry PI 4B board.
 ssh pi@192.168.86.xxx
 vi nosleep.sh ( add following line to disable sleep feature )
@@ -53,7 +61,9 @@ sudo apt-get update
 sudo apt-get upgrade
 sync
 sudo reboot
-sudo apt-get install python-dev python-pip python-setuptools python3-dev python3-pip python3-setuptools dnsutils apache2 vsftpd ftp git python-smbus i2c-tools bluetooth blueman bluez python-bluetooth libbluetooth-dev rfkill
+sudo apt-get install python-dev python-pip python-setuptools python3-dev python3-pip python3-setuptools dnsutils apache2 vsftpd ftp git python-smbus i2c-tools bluetooth bluez python-bluetooth libbluetooth-dev rfkill mpg123 mplayer
+sudo apt-get remove --purge pulseaudio blueman
+sudo apt install bluealsa
 sudo pip install pybluez
 sudo cat /proc/device-tree/soc/spi@7e204000/status
 sudo cat /proc/device-tree/soc/pwm@7e20c000/status
@@ -65,6 +75,16 @@ wget https://project-downloads.drogon.net/wiringpi-latest.deb
 sudo dpkg -i wiringpi-latest.deb
 gpio -v      ( make sure it's v2.52 or above )
 gpio readall
+
+sudo vi /lib/systemd/system/bluealsa.service  append last line -p a2dp-source -p a2dp-sink
+sudo adduser pi bluetooth
+sudo vi /lib/systemd/system/bluetooth.service  append --noplugin=sap -C to line that start with ExecStart=
+
+vi ~/.asoundrc
+defaults.bluealsa.interface "hci0"
+defaults.bluealsa.device "0C:E0:E4:CB:2F:CC"
+defaults.bluealsa.profile "a2dp"
+defaults.bluealsa.delay 10000
 
 cd ~/
 git clone https://github.com/chenphilip888/rpi4b-bluetooth.git
@@ -78,6 +98,7 @@ power on
 pairable on
 discoverable on
 scan on
+scan off
 trust ...
 pair ...
 connect ...
@@ -87,6 +108,46 @@ quit
 
 sudo ./enablebluetooth.sh
 
+bluetooth earphone see: https://sigmdel.ca/michel/ha/rpi/bluetooth_n_buster_01_en.html
+sudo vi /etc/rc.local add
+rfkill unblock bluetooth
+echo "pairable on\ndiscoverable on\nexit\n" | bluetoothctl
+sudo systemctl restart bluetooth.service
+sudo reboot
+
+sudo sdptool add SP
+sudo hcitool dev
+sudo hciconfig hci0 piscan
+sudo systemctl status bluetooth.service
+put PLT_M70 on ear.
+power on PLT_M70.
+vi pair.sh
+echo -e "pair 0C:E0:E4:CB:2F:CC\ntrust 0C:E0:E4:CB:2F:CC\nquit" | bluetoothctl
+vi connect.sh
+echo -e "connect 0C:E0:E4:CB:2F:CC\nquit" | bluetoothctl
+./pair.sh
+./connect.sh
+aplay -D bluealsa /usr/share/sounds/alsa/Front_Center.wav
+mplayer -ao alsa:device=bluealsa *.mp3
+power off PLT_M70.
+
+plugin Koss KPH7 lightweight headphone to Tinkerboard's phone jack.
+alsamixer  ( adjust volume )
+aplay /usr/share/sounds/alsa/Front_Center.wav
+mplayer *.mp3
+
+plugin Logitech USB headset.
+aplay -l
+arecord -l
+sudo vi /usr/share/alsa/alsa.conf
+defaults.ctl.card 1  ( 1 = usb, 0 = headphone )
+defaults.pcm.card 1
+alsamixer  ( adjust volume )
+aplay /usr/share/sounds/alsa/Front_Center.wav
+mplayer *.mp3
+arecord 123.wav
+aplay 123.wav
+
 -------------------------------------------------------------------------
 
 Here are the summary of the tests: 
@@ -94,13 +155,15 @@ Here are the summary of the tests:
 See GPIO-Pinout-rpi4b.png and https://www.raspberrypi.org/documentation/usage/gpio
 These tests used Seeed Grove starter kit LED, Grove-LCD RGB Backlight V3.0 JHD1313M2, Analog Servo.
 
+see https://electronicshobbyists.com/controlling-gpio-through-android-app-over-bluetooth-raspberry-pi-bluetooth-tutorial/
+
 1. led test.
    This test will blink led 5 times.
    Connect gpio pin 18 to led control.
    Connect gpio pin 2 to led 5V.
    Connect gpio pin 9 to led ground.
-   On Raspberry PI 4B board, type "./rfcomm_server_led.py"
-   On PC, type "./rfcomm_client_led.py"  ( change bd_addr to your Raspberry PI 4B board )
+   On Raspberry PI 4B board, type "sudo ./rfcomm_server_led.py"
+   On PC, type "./rfcomm_client_led.py"
 
 2. i2c lcd test.
    This test will change lcd backlight color for 5 cycles.
@@ -109,15 +172,15 @@ These tests used Seeed Grove starter kit LED, Grove-LCD RGB Backlight V3.0 JHD13
    Connect gpio pin 5 to lcd display SCL.
    Connect gpio pin 2 to lcd display 5V.
    Connect gpio pin 9 to lcd display ground.
-   On Raspberry PI 4B board, type "./rfcomm_server_lcd.py"
-   On PC, type "./rfcomm_client_lcd.py"  ( change bd_addr to your Raspberry PI 4B board )
+   On Raspberry PI 4B board, type "sudo ./rfcomm_server_lcd.py"
+   On PC, type "./rfcomm_client_lcd.py"
 
 3. servo.
    This test will turn servo 90 degree - 180 degree - 90 degree - 0 degree etc.
    Connect gpio pin 33 to servo control.
    Connect gpio pin 2 to servo 5V.
    Connect gpio pin 9 to servo ground.
-   On Raspberry PI 4B board, type "./rfcomm_server_servo.py"
-   On PC, type "./rfcomm_client_servo.py"  ( change bd_addr to your Raspberry PI 4B board )
+   On Raspberry PI 4B board, type "sudo ./rfcomm_server_servo.py"
+   On PC, type "./rfcomm_client_servo.py"
 
 ------------------------------------------------------------------------------

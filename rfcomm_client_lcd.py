@@ -1,14 +1,23 @@
 #!/usr/bin/python3
 
 import bluetooth
+import sys
 import time
 
-bd_addr = "DC:A6:32:D4:DE:E0"
+uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
+service_matches = bluetooth.find_service( uuid = uuid )
 
-port = 1
+if len(service_matches) == 0:
+    print("couldn't find the FooBar service")
+    sys.exit(0)
+
+first_match = service_matches[0]
+port = first_match["port"]
+name = first_match["name"]
+host = first_match["host"]
 
 sock=bluetooth.BluetoothSocket( bluetooth.RFCOMM )
-sock.connect((bd_addr, port))
+sock.connect((host, port))
 
 for i in range( 5 ):
     sock.send("red")

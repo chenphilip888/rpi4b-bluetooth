@@ -1,4 +1,5 @@
 enable_uart=1
+dtparam=audio=on
 dtparam=i2c_arm=on
 dtparam=spi=on
 dtoverlay=pwm-2chan,pin=12,func=4,pin2=13,func2=4
